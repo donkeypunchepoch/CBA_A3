@@ -2,6 +2,44 @@
 
 ADDON = false;
 
+/*
+
+["x", { 
+diag_log text format ["X EH %1 - %2 - %3 - %4", _this, _thisArgs, _thisId, _eventName] 
+}, [5]] call cba_events_fnc_addBigEH;
+
+["x", 22] call CBA_fnc_localEvent;
+
+*/
+
+GVAR(nextHelperIndex) = 0;
+FUNC(addBigEH) = {
+    params [["_eventName", "", [""]], ["_eventFunc", nil, [{}]], ["_thisArgs", []]];
+    TRACE_2("params",_eventName,_eventFunc,_thisArgs);
+
+    private _helperVarIndex = GVAR(nextHelperIndex);
+    GVAR(nextHelperIndex) = GVAR(nextHelperIndex) + 1;
+    
+    private _helperVarName = format [QGVAR(helper_%1), _helperVarIndex];
+    private _helperFunc = compile format [QUOTE([ARR_2(_this, %1)] call FUNC(HELPER)), _helperVarIndex];
+    private _thisId = [_eventName, _helperFunc] call CBA_fnc_addEventHandler;
+
+    TRACE_4("",_helperVarIndex,_helperVarName,_helperFunc,_thisId);
+
+    missionNamespace setVariable [_helperVarName, [_eventFunc, _eventName, _thisId, _thisArgs]];
+};
+
+FUNC(HELPER) = {
+    params ["_ehArgs", "_helperVarIndex"];
+    TRACE_2("params",_ehArgs,_helperVarIndex);
+    private _helperVarName = format [QGVAR(helper_%1), _helperVarIndex];
+    (missionNamespace getVariable _helperVarName) params ["_eventFunc", "_thisType", "_thisId", "_thisArgs"];
+    _ehArgs call _eventFunc;
+};
+
+
+
+
 //ClientOwner command is unreliable in saved games
 //CBA_clientID will hold the correct value for the client's owner (needed for publicVariableClient and remoteExec)
 CBA_clientID = -1; //Will be -1 until real value recieved from server
